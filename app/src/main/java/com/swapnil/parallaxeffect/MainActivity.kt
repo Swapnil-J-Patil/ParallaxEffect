@@ -76,40 +76,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ParallaxEffectTheme {
-                val images = listOf(
-                    R.drawable.image_1,
-                    R.drawable.image_2,
-                    R.drawable.image_3,
-                    R.drawable.image_4,
-                )
 
-                /*Column {
-                    Image(
-                        painter = painterResource(id = images[0]),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.size(200.dp)
-                            .border()
-
-                    )
-                    Image(
-                        painter = painterResource(id = images[1]),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.size(200.dp)
-                    )
-                }*/
-                // VerticalImagePager()
-                val image1 = ImageBitmap.imageResource(R.drawable.image_1)
-                val image2 = ImageBitmap.imageResource(R.drawable.image_2)
-
-                // BlendImagesWithComposeShader(image1, image2)
-                /* DripStretchEffect(
-                     image = image1,
-                     modifier = Modifier
-                         .fillMaxSize()
-                 )*/
-                SmoothColorTransition()
+                Box {
+                    SmoothColorTransition()
+                   // SmoothImageSwipeTransition()
+                }
             }
         }
     }
@@ -123,7 +94,11 @@ fun SmoothColorTransition() {
     val screenHeightPx = with(density) { screenHeight.toPx() }
 
     val colors = listOf(Color.Blue, Color.Red, Color.Green) // Your 3 colors
-
+    val images = listOf(
+        painterResource(id = R.drawable.image_1),
+        painterResource(id = R.drawable.image_2),
+        painterResource(id = R.drawable.image_3)
+    )
     var currentIndex by remember { mutableStateOf(1) } // Start at color2
     val offsetY = remember { Animatable(0f) } // Transition progress between 0f-1f
     val isSwiping = remember { mutableStateOf(false) }
@@ -141,6 +116,13 @@ fun SmoothColorTransition() {
 
     val startY: Float
     val endY: Float
+    val startImage = images.getOrNull(currentIndex)
+    val targetImage = when {
+        lastDragDirection.value < 0 && currentIndex > 0 -> images[currentIndex - 1] // Swipe UP
+        lastDragDirection.value > 0 && currentIndex < images.lastIndex -> images[currentIndex + 1] // Swipe DOWN
+        else -> startImage
+    }
+    val translationOffset = (1f - offsetY.value) * screenHeightPx * if (lastDragDirection.value < 0) 1 else -1
 
     if (lastDragDirection.value < 0) {
         // Swiping UP — new color should appear from the BOTTOM
@@ -205,37 +187,133 @@ fun SmoothColorTransition() {
                 )
             )
     )
-}
-
-
-@Composable
-fun VerticalImagePager() {
-    val images = listOf(
-        R.drawable.image_1,
-        R.drawable.image_2,
-        R.drawable.image_3,
-        R.drawable.image_4,
-    )
-
-    val pagerState = rememberPagerState(pageCount = { images.size })
-
-    VerticalPager(
-        state = pagerState,
-        modifier = Modifier.fillMaxSize()
-    ) { page ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            // 🔹 Background Image
+    {
+        targetImage?.let {
             Image(
-                painter = painterResource(id = images[page]),
+                painter = it,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize(0.3f)
+                    .graphicsLayer {
+                        alpha = offsetY.value
+                        translationY = translationOffset
+                    }
             )
+        }
 
-
+        startImage?.let {
+            Image(
+                painter = it,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize(0.3f)
+                    .graphicsLayer {
+                        alpha = 1 - offsetY.value
+                    }
+            )
         }
     }
 }
+
+@Composable
+fun SmoothImageSwipeTransition() {
+    val images = listOf(
+        painterResource(id = R.drawable.image_1),
+        painterResource(id = R.drawable.image_2),
+        painterResource(id = R.drawable.image_3)
+    )
+
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    val density = LocalDensity.current
+    val screenHeightPx = with(density) { screenHeight.toPx() }
+
+    var currentIndex by remember { mutableStateOf(1) } // Start from image2
+    val offsetY = remember { Animatable(0f) }
+    val lastDragDirection = remember { mutableStateOf(0f) }
+    val scope = rememberCoroutineScope()
+
+    val startImage = images.getOrNull(currentIndex)
+    val targetImage = when {
+        lastDragDirection.value < 0 && currentIndex > 0 -> images[currentIndex - 1] // Swipe UP
+        lastDragDirection.value > 0 && currentIndex < images.lastIndex -> images[currentIndex + 1] // Swipe DOWN
+        else -> startImage
+    }
+
+    val translationOffset = (1f - offsetY.value) * screenHeightPx * if (lastDragDirection.value < 0) 1 else -1
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(currentIndex) {
+                detectVerticalDragGestures(
+                    onDragStart = { /* no-op */ },
+                    onDragEnd = {
+                        scope.launch {
+                            if (lastDragDirection.value < 0 && currentIndex > 0) {
+                                offsetY.animateTo(1f, tween(800, easing = LinearOutSlowInEasing))
+                                offsetY.snapTo(0f)
+                                currentIndex -= 1
+                            } else if (lastDragDirection.value > 0 && currentIndex < images.lastIndex) {
+                                offsetY.animateTo(1f, tween(800, easing = LinearOutSlowInEasing))
+                                offsetY.snapTo(0f)
+                                currentIndex += 1
+                            } else {
+                                offsetY.animateTo(
+                                    0f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    )
+                                )
+                            }
+                        }
+                    },
+                    onVerticalDrag = { change, dragAmount ->
+                        change.consume()
+                        lastDragDirection.value = dragAmount
+                        scope.launch {
+                            val progress =
+                                (offsetY.value - dragAmount / screenHeightPx).coerceIn(0f, 1f)
+                            offsetY.snapTo(progress)
+                        }
+                    }
+                )
+            }
+    ) {
+
+        targetImage?.let {
+            Image(
+                painter = it,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize(0.3f)
+                    .graphicsLayer {
+                        alpha = offsetY.value
+                        translationY = translationOffset
+                    }
+            )
+        }
+
+        startImage?.let {
+            Image(
+                painter = it,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize(0.3f)
+                    .graphicsLayer {
+                        alpha = 1 - offsetY.value
+                    }
+            )
+        }
+    }
+}
+
+
+
 
 
 

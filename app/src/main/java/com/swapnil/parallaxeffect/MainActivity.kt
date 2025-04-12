@@ -22,7 +22,9 @@ import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -64,6 +66,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import com.swapnil.parallaxeffect.ui.theme.ParallaxEffectTheme
 import com.swapnil.parallaxeffect.ui.theme.blue
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -96,16 +99,16 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.size(200.dp)
                     )
                 }*/
-               // VerticalImagePager()
+                // VerticalImagePager()
                 val image1 = ImageBitmap.imageResource(R.drawable.image_1)
                 val image2 = ImageBitmap.imageResource(R.drawable.image_2)
 
-               // BlendImagesWithComposeShader(image1, image2)
-               /* DripStretchEffect(
-                    image = image1,
-                    modifier = Modifier
-                        .fillMaxSize()
-                )*/
+                // BlendImagesWithComposeShader(image1, image2)
+                /* DripStretchEffect(
+                     image = image1,
+                     modifier = Modifier
+                         .fillMaxSize()
+                 )*/
                 SmoothColorTransition()
             }
         }
@@ -119,51 +122,73 @@ fun SmoothColorTransition() {
     val density = LocalDensity.current
     val screenHeightPx = with(density) { screenHeight.toPx() }
 
-    val offsetY = remember { Animatable(screenHeightPx) } // Start fully on color2
+    val colors = listOf(Color.Blue, Color.Red, Color.Green) // Your 3 colors
+
+    var currentIndex by remember { mutableStateOf(1) } // Start at color2
+    val offsetY = remember { Animatable(0f) } // Transition progress between 0f-1f
     val isSwiping = remember { mutableStateOf(false) }
     val lastDragDirection = remember { mutableStateOf(0f) }
     val scope = rememberCoroutineScope()
 
-    val color1 = Color.Blue // Teal
-    val color2 = Color.Red // Tomato
+    val startColor = colors.getOrNull(currentIndex) ?: Color.Black
+    val targetColor = when {
+        lastDragDirection.value < 0 && currentIndex > 0 -> colors[currentIndex - 1] // Swipe UP
+        lastDragDirection.value > 0 && currentIndex < colors.lastIndex -> colors[currentIndex + 1] // Swipe DOWN
+        else -> startColor
+    }
 
-    val transitionProgress = (offsetY.value  / screenHeightPx).coerceIn(0f, 1f)
+    val blendedColor = lerp(startColor, targetColor, offsetY.value)
+
+    val startY: Float
+    val endY: Float
+
+    if (lastDragDirection.value < 0) {
+        // Swiping UP — new color should appear from the BOTTOM
+        startY = screenHeightPx * 2f
+        endY = -screenHeightPx
+    } else if (lastDragDirection.value > 0) {
+        // Swiping DOWN — new color should appear from the TOP
+        startY = -screenHeightPx
+        endY = screenHeightPx * 2f
+    } else {
+        // Default
+        startY = -screenHeightPx
+        endY = screenHeightPx * 2f
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .pointerInput(Unit) {
+            .pointerInput(currentIndex) {
                 detectVerticalDragGestures(
-                    onDragStart = {
-                        isSwiping.value = true
-                    },
+                    onDragStart = { isSwiping.value = true },
                     onDragEnd = {
                         isSwiping.value = false
-
                         scope.launch {
-                            val target = if (lastDragDirection.value < 0) {
-                                // Swiped UP → reveal color1
-                                0f
+                            if (lastDragDirection.value < 0 && currentIndex > 0) {
+                                // Animate to full transition
+                                offsetY.animateTo(1f, tween(800, easing = LinearOutSlowInEasing))
+                                // Reset offset first (so lerp uses 0f before recomposition!)
+                                offsetY.snapTo(0f)
+                                // Now update index AFTER resetting offset
+                                currentIndex -= 1
+                            } else if (lastDragDirection.value > 0 && currentIndex < colors.lastIndex) {
+                                offsetY.animateTo(1f, tween(800, easing = LinearOutSlowInEasing))
+                                offsetY.snapTo(0f)
+                                currentIndex += 1
                             } else {
-                                // Swiped DOWN → return to color2
-                                screenHeightPx
+                                // Not enough swipe: reset nicely
+                                offsetY.snapTo(0f)
                             }
-
-                            offsetY.animateTo(
-                                targetValue = target,
-                                animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing)
-                            )
                         }
                     },
                     onVerticalDrag = { change, dragAmount ->
                         change.consume()
                         lastDragDirection.value = dragAmount
-
-                        if (isSwiping.value) {
-                            scope.launch {
-                                val newOffset = (offsetY.value + dragAmount).coerceIn(0f, screenHeightPx)
-                                offsetY.snapTo(newOffset)
-                            }
+                        scope.launch {
+                            val progress =
+                                (offsetY.value - dragAmount / screenHeightPx).coerceIn(0f, 1f)
+                            offsetY.snapTo(progress)
                         }
                     }
                 )
@@ -171,23 +196,16 @@ fun SmoothColorTransition() {
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        color1,
-                        lerp(color1, color2, transitionProgress),
-                        color2
+                        startColor,
+                        blendedColor,
+                        targetColor
                     ),
-                    startY = -screenHeightPx,
-                    endY = screenHeightPx * 2f
+                    startY = startY,
+                    endY = endY
                 )
             )
     )
 }
-
-
-
-
-
-
-
 
 
 @Composable

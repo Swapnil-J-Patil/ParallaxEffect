@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import android.graphics.RenderEffect
 import android.graphics.Shader
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -26,6 +27,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.material.ExperimentalMaterialApi
@@ -35,6 +37,7 @@ import androidx.compose.material.swipeable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
@@ -48,6 +51,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -59,6 +63,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import com.swapnil.parallaxeffect.ui.theme.ParallaxEffectTheme
 import com.swapnil.parallaxeffect.ui.theme.blue
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.Q)
@@ -100,145 +105,59 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier
                         .fillMaxSize()
                 )*/
-                SwipeToTransitionScreen()
+                SmoothColorTransition()
             }
         }
     }
 }
-@OptIn(ExperimentalMaterialApi::class)
+
+
 @Composable
-fun SwipeToTransitionScreen() {
+fun SmoothColorTransition() {
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
-    val screenHeightPx = with(LocalDensity.current) { screenHeight.toPx() }
+    val density = LocalDensity.current
+    val screenHeightPx = with(density) { screenHeight.toPx() }
 
-    val anchors = mapOf(0f to 0, screenHeightPx to 1)
+    val offsetY = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
 
-    val swipeState = rememberSwipeableState(0)
-    val swipeableModifier = Modifier.swipeable(
-        state = swipeState,
-        anchors = anchors,
-        thresholds = { _, _ -> FractionalThreshold(0.3f) },
-        orientation = Orientation.Vertical
-    )
+    val color1 = Color(0xFF008080) // Teal
+    val color2 = Color(0xFFFF6347) // Tomato
 
-    // Animate progress from 0f to 1f based on swipe state
-    val animatedProgress by animateFloatAsState(
-        targetValue = swipeState.offset.value  / screenHeightPx ,
-        animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
-        label = "SwipeProgress"
-    )
-
-
-    val colorStart = Color.Red
-    val colorEnd = Color.Blue
-
-    val brush = Brush.verticalGradient(
-        colorStops = arrayOf(
-            0f to colorStart,
-            1f to lerp(colorStart, colorEnd, animatedProgress),
-            //1f to colorEnd
-        )
-    )
-
-
+    // Progress between 0 and 1 based on drag distance
+    val transitionProgress = (offsetY.value / screenHeightPx).coerceIn(0f, 1f)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .then(swipeableModifier)
-            .background(brush)
-
-    )
-}
-
-
-
-
-@Composable
-fun DripStretchEffect(image: ImageBitmap, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val topImageHeightRatio = 0.6f
-        val canvasWidth = size.width
-        val canvasHeight = size.height
-
-        val topHeight = (canvasHeight * topImageHeightRatio).toInt()
-        val bottomHeight = canvasHeight.toInt() - topHeight
-
-        drawIntoCanvas { canvas ->
-            val paint = android.graphics.Paint()
-
-            // Convert to Android Bitmap
-            val androidBitmap = image.asAndroidBitmap()
-
-            // Create Android Canvas
-            val nativeCanvas = canvas.nativeCanvas
-
-            // Draw the top part of the image
-            val srcTop = android.graphics.Rect(0, 0, androidBitmap.width, androidBitmap.height)
-            val dstTop = android.graphics.Rect(0, 0, canvasWidth.toInt(), topHeight)
-
-            nativeCanvas.drawBitmap(androidBitmap, srcTop, dstTop, paint)
-
-            // Take a 1px height strip from the bottom of the image
-            val stripHeight = 1
-            val srcBottom = android.graphics.Rect(
-                0,
-                androidBitmap.height - stripHeight,
-                androidBitmap.width,
-                androidBitmap.height
-            )
-
-            // Stretch this bottom strip downward to fill the rest
-            val dstBottom = android.graphics.Rect(
-                0,
-                topHeight,
-                canvasWidth.toInt(),
-                canvasHeight.toInt()
-            )
-
-            nativeCanvas.drawBitmap(androidBitmap, srcBottom, dstBottom, paint)
-        }
-    }
-}
-
-@Composable
-fun SmoothColorTransitionScreen() {
-    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
-    val screenHeightPx = with(LocalDensity.current) { screenHeight.toPx() }
-
-    // Your start and end colors
-    val colorA = Color(0xFF1E88E5) // Blue
-    val colorB = Color(0xFFE53935) // Red
-
-    // Track the drag offset
-    var dragOffset by remember { mutableStateOf(0f) }
-
-    // Clamp between 0f and screen height
-    val clampedOffset = dragOffset.coerceIn(0f, screenHeightPx)
-
-    // Progress for gradient blending
-    val progress = clampedOffset / screenHeightPx
-
-    // Interpolated brush
-    val brush = Brush.verticalGradient(
-        colorStops = arrayOf(
-            0f to lerp(colorA, colorB, progress),
-            1f to colorB
-        )
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(brush)
-            .draggable(
-                orientation = Orientation.Vertical,
-                state = rememberDraggableState { delta ->
-                    dragOffset += delta
+            .pointerInput(Unit) {
+                detectVerticalDragGestures { change, dragAmount ->
+                    change.consume()
+                    scope.launch {
+                        val newOffset = (offsetY.value + dragAmount).coerceIn(0f, screenHeightPx)
+                        offsetY.snapTo(newOffset)
+                    }
                 }
+            }
+            .background(
+                Brush.verticalGradient(
+                    // Dynamic gradient shifting based on progress
+                    colors = listOf(
+                        color1,
+                        lerp(color1, color2, transitionProgress),
+                        color2
+                    ),
+                    startY = -1800f,
+                    endY = screenHeightPx + 2500f
+                )
             )
     )
 }
+
+
+
+
+
 
 @Composable
 fun VerticalImagePager() {
@@ -266,62 +185,6 @@ fun VerticalImagePager() {
 
 
         }
-    }
-}
-@Composable
-fun BlendedVerticalImages(
-    image1: ImageBitmap,
-    image2: ImageBitmap,
-    modifier: Modifier = Modifier
-) {
-    Box(modifier = modifier) {
-        // Bottom image with gradient fade-in from top
-        Image(
-            bitmap = image2,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .graphicsLayer {
-                    alpha = 1f
-                }
-                .drawWithCache {
-                    val gradient = Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, Color.Black),
-                        startY = 0f,
-                        endY = size.height * 0.2f
-                    )
-                    onDrawWithContent {
-                        drawContent()
-                        drawRect(gradient, blendMode = BlendMode.DstIn)
-                    }
-                }
-        )
-
-        // Top image with gradient fade-out at bottom
-        Image(
-            bitmap = image1,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopCenter)
-                .graphicsLayer {
-                    alpha = 1f
-                }
-                .drawWithCache {
-                    val gradient = Brush.verticalGradient(
-                        colors = listOf(Color.Black, Color.Transparent),
-                        startY = size.height * 0.8f,
-                        endY = size.height
-                    )
-                    onDrawWithContent {
-                        drawContent()
-                        drawRect(gradient, blendMode = BlendMode.DstIn)
-                    }
-                }
-        )
     }
 }
 

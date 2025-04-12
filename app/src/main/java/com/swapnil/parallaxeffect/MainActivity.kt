@@ -21,6 +21,7 @@ import android.graphics.Shader
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -118,41 +119,71 @@ fun SmoothColorTransition() {
     val density = LocalDensity.current
     val screenHeightPx = with(density) { screenHeight.toPx() }
 
-    val offsetY = remember { Animatable(0f) }
+    val offsetY = remember { Animatable(screenHeightPx) } // Start fully on color2
+    val isSwiping = remember { mutableStateOf(false) }
+    val lastDragDirection = remember { mutableStateOf(0f) }
     val scope = rememberCoroutineScope()
 
-    val color1 = Color(0xFF008080) // Teal
-    val color2 = Color(0xFFFF6347) // Tomato
+    val color1 = Color.Blue // Teal
+    val color2 = Color.Red // Tomato
 
-    // Progress between 0 and 1 based on drag distance
-    val transitionProgress = (offsetY.value / screenHeightPx).coerceIn(0f, 1f)
+    val transitionProgress = (offsetY.value  / screenHeightPx).coerceIn(0f, 1f)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
-                detectVerticalDragGestures { change, dragAmount ->
-                    change.consume()
-                    scope.launch {
-                        val newOffset = (offsetY.value + dragAmount).coerceIn(0f, screenHeightPx)
-                        offsetY.snapTo(newOffset)
+                detectVerticalDragGestures(
+                    onDragStart = {
+                        isSwiping.value = true
+                    },
+                    onDragEnd = {
+                        isSwiping.value = false
+
+                        scope.launch {
+                            val target = if (lastDragDirection.value < 0) {
+                                // Swiped UP → reveal color1
+                                0f
+                            } else {
+                                // Swiped DOWN → return to color2
+                                screenHeightPx
+                            }
+
+                            offsetY.animateTo(
+                                targetValue = target,
+                                animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing)
+                            )
+                        }
+                    },
+                    onVerticalDrag = { change, dragAmount ->
+                        change.consume()
+                        lastDragDirection.value = dragAmount
+
+                        if (isSwiping.value) {
+                            scope.launch {
+                                val newOffset = (offsetY.value + dragAmount).coerceIn(0f, screenHeightPx)
+                                offsetY.snapTo(newOffset)
+                            }
+                        }
                     }
-                }
+                )
             }
             .background(
                 Brush.verticalGradient(
-                    // Dynamic gradient shifting based on progress
                     colors = listOf(
                         color1,
                         lerp(color1, color2, transitionProgress),
                         color2
                     ),
-                    startY = -1800f,
-                    endY = screenHeightPx + 2500f
+                    startY = -screenHeightPx,
+                    endY = screenHeightPx * 2f
                 )
             )
     )
 }
+
+
+
 
 
 

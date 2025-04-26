@@ -1,1 +1,1 @@
-Working on amazing parallax effect.
+Working on amazing parallax effect. Added color transition to it till now. 

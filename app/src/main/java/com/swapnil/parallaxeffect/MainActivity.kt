@@ -95,11 +95,16 @@ fun SmoothColorTransition() {
 
     val colors = listOf(Color.Blue, Color.Red, Color.Green) // Your 3 colors
     val images = listOf(
-        painterResource(id = R.drawable.image_1),
-        painterResource(id = R.drawable.image_2),
+        painterResource(id = R.drawable.tanjiro),
+        painterResource(id = R.drawable.tanjiro_fire),
         painterResource(id = R.drawable.image_3)
     )
-    var currentIndex by remember { mutableStateOf(1) } // Start at color2
+    val imagesBottom = listOf(
+        painterResource(id = R.drawable.ocean),
+        painterResource(id = R.drawable.ocean),
+        painterResource(id = R.drawable.ocean)
+    )
+    var currentIndex by remember { mutableStateOf(2) } // Start at color2
     val offsetY = remember { Animatable(0f) } // Transition progress between 0f-1f
     val isSwiping = remember { mutableStateOf(false) }
     val lastDragDirection = remember { mutableStateOf(0f) }
@@ -121,6 +126,13 @@ fun SmoothColorTransition() {
         lastDragDirection.value < 0 && currentIndex > 0 -> images[currentIndex - 1] // Swipe UP
         lastDragDirection.value > 0 && currentIndex < images.lastIndex -> images[currentIndex + 1] // Swipe DOWN
         else -> startImage
+    }
+
+    val startImageBottom = imagesBottom.getOrNull(currentIndex)
+    val targetImageBottom = when {
+        lastDragDirection.value < 0 && currentIndex > 0 -> imagesBottom[currentIndex - 1] // Swipe UP
+        lastDragDirection.value > 0 && currentIndex < imagesBottom.lastIndex -> imagesBottom[currentIndex + 1] // Swipe DOWN
+        else -> startImageBottom
     }
     val translationOffset = (1f - offsetY.value) * screenHeightPx * if (lastDragDirection.value < 0) 1 else -1
 
@@ -185,88 +197,77 @@ fun SmoothColorTransition() {
                     startY = startY,
                     endY = endY
                 )
-            )
+            ),
+        contentAlignment = Alignment.Center
     )
     {
-        targetImage?.let {
+        // START image (currently visible, moves away)
+        startImage?.let {
+            val startTranslationY = when {
+                lastDragDirection.value < 0 -> -offsetY.value * screenHeightPx // Swipe up → move up
+                lastDragDirection.value > 0 -> offsetY.value * screenHeightPx  // Swipe down → move down
+                else -> 0f
+            }
+
             Image(
                 painter = it,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .fillMaxSize(0.3f)
+                    .fillMaxWidth()
+                    .height(400.dp)
+                    .graphicsLayer {
+                        alpha = 1f - offsetY.value
+                        translationY = startTranslationY
+                    }
+            )
+        }
+
+// TARGET image (incoming, moves into place)
+        targetImage?.let {
+            val targetTranslationY = when {
+                lastDragDirection.value < 0 -> (1f - offsetY.value) * screenHeightPx // Swipe up → come from bottom
+                lastDragDirection.value > 0 -> -(1f - offsetY.value) * screenHeightPx // Swipe down → come from top
+                else -> 0f
+            }
+
+            Image(
+                painter = it,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(400.dp)
                     .graphicsLayer {
                         alpha = offsetY.value
-                        translationY = translationOffset
-                    }
-            )
-        }
-
-        startImage?.let {
-            Image(
-                painter = it,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize(0.3f)
-                    .graphicsLayer {
-                        alpha = 1 - offsetY.value
+                        translationY = targetTranslationY
                     }
             )
         }
     }
-}
-
-@Composable
-fun SmoothImageSwipeTransition() {
-    val images = listOf(
-        painterResource(id = R.drawable.image_1),
-        painterResource(id = R.drawable.image_2),
-        painterResource(id = R.drawable.image_3)
-    )
-
-    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
-    val density = LocalDensity.current
-    val screenHeightPx = with(density) { screenHeight.toPx() }
-
-    var currentIndex by remember { mutableStateOf(1) } // Start from image2
-    val offsetY = remember { Animatable(0f) }
-    val lastDragDirection = remember { mutableStateOf(0f) }
-    val scope = rememberCoroutineScope()
-
-    val startImage = images.getOrNull(currentIndex)
-    val targetImage = when {
-        lastDragDirection.value < 0 && currentIndex > 0 -> images[currentIndex - 1] // Swipe UP
-        lastDragDirection.value > 0 && currentIndex < images.lastIndex -> images[currentIndex + 1] // Swipe DOWN
-        else -> startImage
-    }
-
-    val translationOffset = (1f - offsetY.value) * screenHeightPx * if (lastDragDirection.value < 0) 1 else -1
-
     Box(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(currentIndex) {
                 detectVerticalDragGestures(
-                    onDragStart = { /* no-op */ },
+                    onDragStart = { isSwiping.value = true },
                     onDragEnd = {
+                        isSwiping.value = false
                         scope.launch {
                             if (lastDragDirection.value < 0 && currentIndex > 0) {
+                                // Animate to full transition
                                 offsetY.animateTo(1f, tween(800, easing = LinearOutSlowInEasing))
+                                // Reset offset first (so lerp uses 0f before recomposition!)
                                 offsetY.snapTo(0f)
+                                // Now update index AFTER resetting offset
                                 currentIndex -= 1
-                            } else if (lastDragDirection.value > 0 && currentIndex < images.lastIndex) {
+                            } else if (lastDragDirection.value > 0 && currentIndex < colors.lastIndex) {
                                 offsetY.animateTo(1f, tween(800, easing = LinearOutSlowInEasing))
                                 offsetY.snapTo(0f)
                                 currentIndex += 1
                             } else {
-                                offsetY.animateTo(
-                                    0f,
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                                        stiffness = Spring.StiffnessLow
-                                    )
-                                )
+                                // Not enough swipe: reset nicely
+                                offsetY.snapTo(0f)
                             }
                         }
                     },
@@ -281,36 +282,66 @@ fun SmoothImageSwipeTransition() {
                     }
                 )
             }
-    ) {
+            /*.background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        startColor,
+                        blendedColor,
+                        targetColor
+                    ),
+                    startY = startY,
+                    endY = endY
+                )
+            )*/,
+        contentAlignment = Alignment.BottomCenter
+    )
+    {
+        // START image (currently visible, moves away)
+        startImageBottom?.let {
+            val startTranslationY = when {
+                lastDragDirection.value < 0 -> -offsetY.value * screenHeightPx // Swipe up → move up
+                lastDragDirection.value > 0 -> offsetY.value * screenHeightPx  // Swipe down → move down
+                else -> 0f
+            }
 
-        targetImage?.let {
             Image(
                 painter = it,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .fillMaxSize(0.3f)
+                    .fillMaxWidth()
+                    .height(400.dp)
                     .graphicsLayer {
-                        alpha = offsetY.value
-                        translationY = translationOffset
+                        alpha = 1f - offsetY.value
+                        translationY = startTranslationY
                     }
             )
         }
 
-        startImage?.let {
+// TARGET image (incoming, moves into place)
+        targetImageBottom?.let {
+            val targetTranslationY = when {
+                lastDragDirection.value < 0 -> (1f - offsetY.value) * screenHeightPx // Swipe up → come from bottom
+                lastDragDirection.value > 0 -> -(1f - offsetY.value) * screenHeightPx // Swipe down → come from top
+                else -> 0f
+            }
+
             Image(
                 painter = it,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .fillMaxSize(0.3f)
+                    .fillMaxWidth()
+                    .height(400.dp)
                     .graphicsLayer {
-                        alpha = 1 - offsetY.value
+                        alpha = offsetY.value
+                        translationY = targetTranslationY
                     }
             )
         }
     }
 }
+
 
 
 

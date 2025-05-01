@@ -1,1 +1,1 @@
-Working on amazing parallax effect. Added color transition to it till now. 
+Working on amazing parallax effect. Keeping this project on hold. 

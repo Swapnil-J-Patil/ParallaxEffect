@@ -1,1 +1,1 @@
-Working on amazing parallax effect. Keeping this project on hold. 
+Keeping this project on hold. 

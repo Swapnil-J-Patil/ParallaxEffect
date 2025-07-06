@@ -1,7 +1,5 @@
 package com.swapnil.parallaxeffect
 
-import android.graphics.Bitmap
-import android.graphics.Color.alpha
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -13,87 +11,39 @@ import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import android.graphics.RenderEffect
-import android.graphics.Shader
-import androidx.annotation.DrawableRes
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.FractionalThreshold
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
-import androidx.compose.material.rememberSwipeableState
-import androidx.compose.material.swipeable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.graphics.asComposeRenderEffect
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.painter.BitmapPainter
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import com.swapnil.parallaxeffect.ui.theme.ParallaxEffectTheme
-import com.swapnil.parallaxeffect.ui.theme.Poppins
-import com.swapnil.parallaxeffect.ui.theme.blue
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.Q)
@@ -115,83 +65,104 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Scene(modifier: Modifier = Modifier) {
+fun Scene(
+    modifier: Modifier = Modifier,
+    bgImage: Int,
+    isMiddleImg: Boolean=false,
+    middleImg: Int=0,
+    bottomImg: Int,
+    text: String,
+    title: String,
+    animAligner: Alignment= Alignment.TopCenter,
+    animModifier: Modifier=Modifier,
+    colAligner: Alignment= Alignment.Center,
+    colModifier: Modifier=Modifier,
+    bottomImgModifier: Modifier,
+    isVisible: Boolean
+) {
     val scale = remember { Animatable(1f) }
     var visibility by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        delay(500)
-        visibility=true
-        delay(1000)
-        while (true) {
-            scale.animateTo(
-                targetValue = 1.8f,
-                animationSpec = tween(
-                    durationMillis = 6000,
-                    easing = FastOutSlowInEasing
+    LaunchedEffect(isVisible) {
+        //delay(500)
+        if (isVisible) {
+
+            visibility = true
+            delay(1000)
+            while (true) {
+                scale.animateTo(
+                    targetValue = 1.8f,
+                    animationSpec = tween(
+                        durationMillis = 6000,
+                        easing = FastOutSlowInEasing
+                    )
                 )
-            )
-            //delay(800)
-            scale.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(
-                    durationMillis = 6000,
-                    easing = FastOutSlowInEasing
+                //delay(800)
+                scale.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(
+                        durationMillis = 6000,
+                        easing = FastOutSlowInEasing
+                    )
                 )
-            )
+            }
         }
     }
     Box(modifier = Modifier.fillMaxSize())
     {
-        Image(
-            painterResource(id = R.drawable.img_6),
-            contentDescription = "AnimeLogo",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxSize()
-                .scale(scale.value)
+        Box(
+            modifier.fillMaxSize()
+        ) {
+            Image(
+                painterResource(id = bgImage),
+                contentDescription = "AnimeLogo",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .scale(scale.value)
 
-            //.aspectRatio(1f)
-        )
-
+                //.aspectRatio(1f)
+            )
+            Box(
+                modifier.fillMaxSize()
+                    .background(color = Color.Black.copy(alpha = 0.3f))
+            )
+        }
 
         AnimatedVisibility(
             visible = visibility,
             enter = slideInVertically(
-                initialOffsetY = { it/2 }, // Starts from full height (bottom)
+                initialOffsetY = { it / 2 }, // Starts from full height (bottom)
                 animationSpec = tween(
-                    durationMillis = 800, // Slightly increased duration for a smoother feel
-                    easing = LinearOutSlowInEasing // Smoother easing for entering animation
+                    durationMillis = 1000, // Slightly increased duration for a smoother feel
+                    easing = FastOutSlowInEasing // Smoother easing for entering animation
                 )
             ) + fadeIn(
                 animationSpec = tween(
-                    durationMillis = 800,
-                    easing = LinearOutSlowInEasing
+                    durationMillis = 1000,
+                    easing = FastOutSlowInEasing
                 )
             ),
             exit = slideOutVertically(
-                targetOffsetY = { it/2 }, // Moves to full height (bottom)
+                targetOffsetY = { it / 2 }, // Moves to full height (bottom)
                 animationSpec = tween(
-                    durationMillis = 800,
+                    durationMillis = 1000,
                     easing = FastOutSlowInEasing // Keeps a natural exit motion
                 )
             ) + fadeOut(
                 animationSpec = tween(
-                    durationMillis = 800,
+                    durationMillis = 1000,
                     easing = FastOutSlowInEasing
                 )
             ),
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(start = 20.dp,top=25.dp)
+            modifier = animModifier
+                .align(animAligner)
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.Center)
-                    .padding(bottom = 380.dp)
+                modifier = colModifier
+                    .align(colAligner)
             ) {
                 Text(
-                    text = "OUR VISION",
+                    text = title,
                     style = MaterialTheme.typography.h2,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
@@ -201,7 +172,7 @@ fun Scene(modifier: Modifier = Modifier) {
                         .fillMaxWidth()
                 )
                 Text(
-                    text = stringResource(id = R.string.lorem_ipsum),
+                    text = text,
                     style = MaterialTheme.typography.h6,
                     fontWeight = FontWeight.Normal,
                     color = Color.White,
@@ -213,63 +184,69 @@ fun Scene(modifier: Modifier = Modifier) {
                 )
             }
         }
-        Image(
-            painterResource(id = R.drawable.moon),
-            contentDescription = "couple",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .padding(start = 15.dp)
-                .aspectRatio(1f)
-                .align(Alignment.Center)
-                .scale(scale.value)
 
-            // Reduce scrolling rate by half.
-        )
+        if(isMiddleImg)
+        {
+            Image(
+                painterResource(id = middleImg),
+                contentDescription = "couple",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth(0.8f)
+                    .padding(start = 15.dp)
+                    .aspectRatio(1f)
+                    .align(Alignment.Center)
+                    .scale(scale.value)
+
+                // Reduce scrolling rate by half.
+            )
+        }
+
         AnimatedVisibility(
             visible = visibility,
             enter = slideInVertically(
                 initialOffsetY = { it }, // Starts from full height (bottom)
                 animationSpec = tween(
-                    durationMillis = 800, // Slightly increased duration for a smoother feel
-                    easing = LinearOutSlowInEasing // Smoother easing for entering animation
+                    durationMillis = 1000, // Slightly increased duration for a smoother feel
+                    easing = FastOutSlowInEasing // Smoother easing for entering animation
                 )
             ) + fadeIn(
                 animationSpec = tween(
-                    durationMillis = 800,
-                    easing = LinearOutSlowInEasing
+                    durationMillis = 1000,
+                    easing = FastOutSlowInEasing
                 )
             ),
             exit = slideOutVertically(
                 targetOffsetY = { it }, // Moves to full height (bottom)
                 animationSpec = tween(
-                    durationMillis = 800,
+                    durationMillis = 1000,
                     easing = FastOutSlowInEasing // Keeps a natural exit motion
                 )
             ) + fadeOut(
                 animationSpec = tween(
-                    durationMillis = 800,
+                    durationMillis = 1000,
                     easing = FastOutSlowInEasing
                 )
             ),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             Image(
-                painterResource(id = R.drawable.couple),
+                painterResource(id = bottomImg),
                 contentDescription = "couple",
                 contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    // .aspectRatio(1f)
+                modifier = bottomImgModifier
                     .align(Alignment.BottomCenter)
                 // Reduce scrolling rate by half.
             )
         }
     }
 }
+
+
+
 @Composable
 fun VerticalPagerExample() {
-    val pagerState = rememberPagerState(initialPage = 0, pageCount = {5})
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 3 })
     val scope = rememberCoroutineScope()
 
     VerticalPager(
@@ -280,6 +257,74 @@ fun VerticalPagerExample() {
         beyondViewportPageCount = 0, // optional: disables offscreen rendering
         pageSpacing = 0.dp // This removes the gap between pages
     ) { page ->
+        val isVisible = pagerState.currentPage == page
+
+        when (page % 3)
+        {
+            0 -> Scene(
+                bgImage = R.drawable.bg1,
+                bottomImg = R.drawable.couple,
+                text = stringResource(id = R.string.lorem_ipsum),
+                title = "OUR VISION",
+                isMiddleImg = true,
+                middleImg = R.drawable.moon,
+                animAligner = Alignment.TopCenter,
+                animModifier = Modifier
+                    .padding(start = 20.dp, top = 25.dp)
+                ,
+                colAligner = Alignment.Center,
+                colModifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 380.dp),
+                bottomImgModifier = Modifier
+                    .fillMaxWidth()
+                // .aspectRatio(1f)
+                ,
+                isVisible = isVisible
+            )
+            1 -> Scene(
+                bgImage = R.drawable.bg2,
+                bottomImg = R.drawable.standing_boy,
+                text = stringResource(id = R.string.lorem_ipsum),
+                title = "OUR VISION",
+                isMiddleImg = false,
+                animAligner = Alignment.BottomCenter,
+                animModifier = Modifier
+                    .padding(start = 20.dp, top = 25.dp)
+                ,
+                colAligner = Alignment.Center,
+                colModifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 200.dp),
+                bottomImgModifier = Modifier
+                    .fillMaxWidth()
+                .aspectRatio(1f)
+                ,
+                isVisible = isVisible
+            )
+            2->
+                Scene(
+                    bgImage = R.drawable.bg3,
+                    bottomImg = R.drawable.astronaut,
+                    text = stringResource(id = R.string.lorem_ipsum),
+                    title = "OUR VISION",
+                    isMiddleImg = false,
+                    animAligner = Alignment.Center,
+                    animModifier = Modifier
+                        .padding(start = 20.dp, top = 25.dp)
+                    ,
+                    colAligner = Alignment.Center,
+                    colModifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 380.dp),
+                    bottomImgModifier = Modifier
+                        .fillMaxWidth()
+                       // .aspectRatio(1f)
+                    ,
+                    isVisible = isVisible
+                )
+            else -> "No Content"
+        }
         /*Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -294,10 +339,11 @@ fun VerticalPagerExample() {
         ) {
             Text(text = "Page #$page", style = MaterialTheme.typography.h1, color = Color.White)
         }*/
-        Scene()
+        // Scene()
         //ParallaxEffect()
     }
 }
+
 @Composable
 fun ParallaxEffect() {
     fun Modifier.parallaxLayoutModifier(scrollState: ScrollState, rate: Int) =
@@ -317,7 +363,7 @@ fun ParallaxEffect() {
     ) {
 
         Image(
-            painterResource(id = R.drawable.img_6),
+            painterResource(id = R.drawable.bg1),
             contentDescription = "Android logo",
             contentScale = ContentScale.FillBounds,
             // Reduce scrolling rate by half.
@@ -329,7 +375,7 @@ fun ParallaxEffect() {
 
 
         Image(
-            painterResource(id = R.drawable.img_6),
+            painterResource(id = R.drawable.bg1),
             contentDescription = "Android logo",
             contentScale = ContentScale.Fit,
             // Reduce scrolling rate by half.
@@ -345,14 +391,14 @@ fun ParallaxEffect() {
                 .offset(y = -300.dp)
                 .background(Color.Black)
                 .parallaxLayoutModifier(scrollState, 2)
-        ) {  }
-       /* Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(500.dp)
-                .offset(y=-300.dp)
-                .background(Color.Red)
-        ) {  }*/
+        ) { }
+        /* Box(
+             modifier = Modifier
+                 .fillMaxWidth()
+                 .height(500.dp)
+                 .offset(y=-300.dp)
+                 .background(Color.Red)
+         ) {  }*/
     }
 }
 

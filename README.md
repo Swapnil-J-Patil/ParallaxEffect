@@ -1,1 +1,1 @@
-Keeping this project on hold. 
+Nearly complete working on dynamic for different screen sizes. 

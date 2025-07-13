@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -82,11 +83,18 @@ fun Scene(
 ) {
     val scale = remember { Animatable(1f) }
     var visibility by remember { mutableStateOf(false) }
+    var middleImgVisibility by remember { mutableStateOf(false) }
+    val configuration= LocalConfiguration.current
+    val screenHeight= configuration.screenHeightDp.dp
+    val screenWidth= configuration.screenWidthDp.dp
+
     LaunchedEffect(isVisible) {
         //delay(500)
         if (isVisible) {
 
             visibility = true
+            delay(200)
+            middleImgVisibility = true
             delay(1000)
             while (true) {
                 scale.animateTo(
@@ -187,6 +195,34 @@ fun Scene(
 
         if(isMiddleImg)
         {
+            AnimatedVisibility(
+                visible = middleImgVisibility,
+                enter = slideInVertically(
+                    initialOffsetY = { it }, // Starts from full height (bottom)
+                    animationSpec = tween(
+                        durationMillis = 1000, // Slightly increased duration for a smoother feel
+                        easing = FastOutSlowInEasing // Smoother easing for entering animation
+                    )
+                ) + fadeIn(
+                    animationSpec = tween(
+                        durationMillis = 1000,
+                        easing = FastOutSlowInEasing
+                    )
+                ),
+                exit = slideOutVertically(
+                    targetOffsetY = { it }, // Moves to full height (bottom)
+                    animationSpec = tween(
+                        durationMillis = 1000,
+                        easing = FastOutSlowInEasing // Keeps a natural exit motion
+                    )
+                ) + fadeOut(
+                    animationSpec = tween(
+                        durationMillis = 1000,
+                        easing = FastOutSlowInEasing
+                    )
+                ),
+                modifier = Modifier.align(Alignment.BottomCenter)
+            ) {
             Image(
                 painterResource(id = middleImg),
                 contentDescription = "couple",
@@ -200,6 +236,7 @@ fun Scene(
 
                 // Reduce scrolling rate by half.
             )
+                }
         }
 
         AnimatedVisibility(
@@ -264,18 +301,18 @@ fun VerticalPagerExample() {
             0 -> Scene(
                 bgImage = R.drawable.bg1,
                 bottomImg = R.drawable.couple,
-                text = stringResource(id = R.string.lorem_ipsum),
-                title = "OUR VISION",
+                text = stringResource(id = R.string.content1),
+                title = stringResource(id = R.string.title1),
                 isMiddleImg = true,
                 middleImg = R.drawable.moon,
-                animAligner = Alignment.TopCenter,
+                animAligner = Alignment.Center,
                 animModifier = Modifier
                     .padding(start = 20.dp, top = 25.dp)
                 ,
                 colAligner = Alignment.Center,
                 colModifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 380.dp),
+                    .padding(bottom = 200.dp),
                 bottomImgModifier = Modifier
                     .fillMaxWidth()
                 // .aspectRatio(1f)
@@ -285,8 +322,8 @@ fun VerticalPagerExample() {
             1 -> Scene(
                 bgImage = R.drawable.bg2,
                 bottomImg = R.drawable.standing_boy,
-                text = stringResource(id = R.string.lorem_ipsum),
-                title = "OUR VISION",
+                text = stringResource(id = R.string.content2),
+                title = stringResource(id = R.string.title2),
                 isMiddleImg = false,
                 animAligner = Alignment.BottomCenter,
                 animModifier = Modifier
@@ -306,8 +343,8 @@ fun VerticalPagerExample() {
                 Scene(
                     bgImage = R.drawable.bg3,
                     bottomImg = R.drawable.astronaut,
-                    text = stringResource(id = R.string.lorem_ipsum),
-                    title = "OUR VISION",
+                    text = stringResource(id = R.string.content3),
+                    title = stringResource(id = R.string.title3),
                     isMiddleImg = false,
                     animAligner = Alignment.Center,
                     animModifier = Modifier

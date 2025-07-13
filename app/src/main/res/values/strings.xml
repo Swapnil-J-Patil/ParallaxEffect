@@ -8,5 +8,13 @@
         Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 -->
     </string>
+    <string name="title1">OUR VISION</string>
+    <string name="content1">Together, we dare to imagine a world where dreams fuel progress and compassion leads the way. Every step we take is towards a brighter tomorrow.</string>
+
+    <string name="title2">OUR MISSION</string>
+    <string name="content2">We’re building more than just technology — we’re crafting experiences that resonate with the soul. Bold, human-first, and limitless.</string>
+
+    <string name="title3">THE JOURNEY BEGINS</string>
+    <string name="content3">From the unknown we emerge, with hope as our compass and creativity as our guide. This is where your story unfolds.</string>
 
 </resources>
